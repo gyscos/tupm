@@ -117,7 +117,7 @@ fn pkcs12_derive_key(password: &str, salt: &[u8], pair: &mut KeyIVPair) -> Resul
 /// Decrypt the UPMv3 database ciphertext using the provided password and salt.
 pub fn decrypt(ciphertext: &[u8], password: &str, salt: &[u8]) -> Result<Vec<u8>, UpmError> {
     let mut pair = KeyIVPair::new();
-    try!(pkcs12_derive_key(password, salt, &mut pair));
+    pkcs12_derive_key(password, salt, &mut pair)?;
 
     match openssl::symm::decrypt(
         openssl::symm::Cipher::aes_256_cbc(),
@@ -139,7 +139,7 @@ pub fn decrypt(ciphertext: &[u8], password: &str, salt: &[u8]) -> Result<Vec<u8>
 /// Encrypt the UPMv3 database plaintext using the provided password and salt.
 pub fn encrypt(plaintext: &[u8], password: &str, salt: &[u8]) -> Result<Vec<u8>, UpmError> {
     let mut pair = KeyIVPair::new();
-    try!(pkcs12_derive_key(password, salt, &mut pair));
+    pkcs12_derive_key(password, salt, &mut pair)?;
 
     match openssl::symm::encrypt(
         openssl::symm::Cipher::aes_256_cbc(),

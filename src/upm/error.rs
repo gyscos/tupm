@@ -69,33 +69,8 @@ impl fmt::Display for UpmError {
 }
 
 impl error::Error for UpmError {
-    /// Provide terse descriptions of the errors.
-    fn description(&self) -> &str {
-        match *self {
-            UpmError::ReadUnderrun => "read underrun",
-            UpmError::KeyIVGeneration => "cannot generate key/iv",
-            UpmError::AccountParse(_) => "cannot parse account",
-            UpmError::Io(ref err) => error::Error::description(err),
-            UpmError::BadMagic => "bad magic",
-            UpmError::BadVersion(_) => "bad database version",
-            UpmError::Crypto(_) => "OpenSSL error",
-            UpmError::BadPassword => "bad password",
-            UpmError::InvalidFilename => "invalid filename",
-            UpmError::TimeParseError(_) => "time parsing error",
-            UpmError::Sync(_) => "cannot sync",
-            UpmError::NoDatabaseFilename => "no database filename",
-            UpmError::NoDatabasePassword => "no database password",
-            UpmError::NoSyncURL => "no sync URL",
-            UpmError::NoSyncCredentials => "no sync credentials",
-            UpmError::SyncDatabaseNotFound => "remote not found",
-            UpmError::Backup(_) => "backup error",
-            UpmError::FlatpackOverflow => "flatpack overflow",
-            UpmError::DuplicateAccountName(_) => "duplicate account name",
-            UpmError::PathNotUnicode(_) => "path is not valid unicode",
-        }
-    }
     /// For errors which encapsulate another error, allow the caller to fetch the contained error.
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             UpmError::Io(ref err) => Some(err),
             UpmError::Crypto(ref err) => Some(err),

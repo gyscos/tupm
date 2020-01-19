@@ -302,7 +302,7 @@ impl AccountEditView {
     pub fn new(account: Account) -> Self {
         let mut v_layout = LinearLayout::vertical();
 
-        let field_max = FIELDS.into_iter().map(|f| f.name.len()).max().unwrap();
+        let field_max = FIELDS.iter().map(|f| f.name.len()).max().unwrap();
         let labelify = |name: &str| {
             let mut s = String::with_capacity(field_max);
             s.push_str(name);
@@ -313,7 +313,7 @@ impl AccountEditView {
             s
         };
 
-        for field in FIELDS.into_iter() {
+        for field in FIELDS.iter() {
             let id = format!("{}_{}", VIEW_ID_EDIT, field.name);
             let mut edit_view = EditView::new();
             edit_view.set_secret(field.secret);
@@ -321,20 +321,20 @@ impl AccountEditView {
                 v_layout.add_child(
                     LinearLayout::horizontal()
                         .child(TextView::new(labelify(field.name)))
-                        .child(BoxView::new(
+                        .child(ResizedView::new(
                             SizeConstraint::AtLeast(30),
                             SizeConstraint::AtMost(1),
-                            edit_view.with_id(id),
+                            edit_view.with_name(id),
                         )),
                 );
             } else {
                 v_layout.add_child(
                     LinearLayout::vertical()
                         .child(TextView::new(labelify(field.name)))
-                        .child(BoxView::new(
+                        .child(ResizedView::new(
                             SizeConstraint::AtLeast(30),
                             SizeConstraint::Fixed(10),
-                            TextArea::new().with_id(id),
+                            TextArea::new().with_name(id),
                         )),
                 );
             }
@@ -369,13 +369,13 @@ impl AccountEditView {
             }
         };
 
-        let account_edit = AccountEditView::new(account.clone()).with_id(VIEW_ID_EDIT);
+        let account_edit = AccountEditView::new(account.clone()).with_name(VIEW_ID_EDIT);
         let controller_tx_clone = controller_tx.clone();
         let database_clone = database.clone();
         let key_override = KeyOverrideView::new(account_edit)
             .register(cursive::event::Event::CtrlChar('r'), |s| {
                 // reveal password
-                if let Some(mut account_edit) = s.find_id::<AccountEditView>(VIEW_ID_EDIT) {
+                if let Some(mut account_edit) = s.find_name::<AccountEditView>(VIEW_ID_EDIT) {
                     account_edit.reveal_password();
                 }
             })
@@ -401,7 +401,7 @@ impl AccountEditView {
     /// Handle the CTRL-R "reveal password" feature.
     fn reveal_password(&mut self) {
         let id = format!("{}_{}", VIEW_ID_EDIT, FIELD_PASSWORD);
-        self.find_id(&id, |edit_view: &mut EditView| {
+        self.call_on_name(&id, |edit_view: &mut EditView| {
             edit_view.set_secret(false);
         });
     }
@@ -409,13 +409,10 @@ impl AccountEditView {
     /// Populate a UI field with a value.
     fn put(&mut self, field_name: &str, value: &str) {
         let id = format!("{}_{}", VIEW_ID_EDIT, field_name);
-        if FIELDS
-            .into_iter()
-            .any(|f| f.name == field_name && f.multiline)
-        {
-            self.find_id(&id, |edit_view: &mut TextArea| edit_view.set_content(value));
+        if FIELDS.iter().any(|f| f.name == field_name && f.multiline) {
+            self.call_on_name(&id, |edit_view: &mut TextArea| edit_view.set_content(value));
         } else {
-            self.find_id(&id, |edit_view: &mut EditView| edit_view.set_content(value));
+            self.call_on_name(&id, |edit_view: &mut EditView| edit_view.set_content(value));
         }
     }
 
@@ -423,18 +420,15 @@ impl AccountEditView {
     fn get(&mut self, field_name: &str) -> String {
         let id = format!("{}_{}", VIEW_ID_EDIT, field_name);
 
-        if FIELDS
-            .into_iter()
-            .any(|f| f.name == field_name && f.multiline)
-        {
-            match self.find_id(&id, |edit_view: &mut TextArea| {
+        if FIELDS.iter().any(|f| f.name == field_name && f.multiline) {
+            match self.call_on_name(&id, |edit_view: &mut TextArea| {
                 String::from(edit_view.get_content())
             }) {
                 Some(x) => x,
                 None => String::from(""),
             }
         } else {
-            match self.find_id(&id, |edit_view: &mut EditView| edit_view.get_content()) {
+            match self.call_on_name(&id, |edit_view: &mut EditView| edit_view.get_content()) {
                 Some(x) => (*x).clone(),
                 None => String::from(""),
             }
@@ -474,7 +468,7 @@ impl AccountEditView {
         // information from AccountEditView before updating the database
         // contained within AccountSelectView.
         let (name, previous, current) =
-            if let Some(mut account_edit) = cursive.find_id::<AccountEditView>(VIEW_ID_EDIT) {
+            if let Some(mut account_edit) = cursive.find_name::<AccountEditView>(VIEW_ID_EDIT) {
                 (
                     account_edit.account.name.clone(),
                     account_edit.account.clone(),
@@ -537,10 +531,10 @@ impl DatabaseEditView {
         v_layout.add_child(
             LinearLayout::horizontal()
                 .child(TextView::new("Sync URL:         "))
-                .child(BoxView::new(
+                .child(ResizedView::new(
                     SizeConstraint::AtLeast(50),
                     SizeConstraint::AtMost(1),
-                    edit_view.with_id(id),
+                    edit_view.with_name(id),
                 )),
         );
 
@@ -550,10 +544,10 @@ impl DatabaseEditView {
         v_layout.add_child(
             LinearLayout::horizontal()
                 .child(TextView::new("Sync credentials: "))
-                .child(BoxView::new(
+                .child(ResizedView::new(
                     SizeConstraint::AtLeast(50),
                     SizeConstraint::AtMost(1),
-                    edit_view.with_id(id),
+                    edit_view.with_name(id),
                 )),
         );
 
@@ -581,7 +575,7 @@ impl DatabaseEditView {
             &database.borrow().sync_url,
             &database.borrow().sync_credentials,
         )
-        .with_id(VIEW_ID_EDIT);
+        .with_name(VIEW_ID_EDIT);
         let controller_tx_clone = controller_tx.clone();
         let key_override = KeyOverrideView::new(database_edit).register(
             cursive::event::Event::CtrlChar('x'),
@@ -603,15 +597,15 @@ impl DatabaseEditView {
     /// Record the (potentially edited) UI fields into the database.
     fn apply(cursive: &mut Cursive, controller_tx: &mpsc::Sender<controller::Message>) {
         let (old_url, old_credentials) = {
-            let database_edit = cursive.find_id::<DatabaseEditView>(VIEW_ID_EDIT).unwrap();
+            let database_edit = cursive.find_name::<DatabaseEditView>(VIEW_ID_EDIT).unwrap();
             (database_edit.url.clone(), database_edit.credentials.clone())
         };
 
         let id = format!("{}_{}", VIEW_ID_EDIT, "url");
-        let new_url = cursive.find_id::<EditView>(&id).unwrap().get_content();
+        let new_url = cursive.find_name::<EditView>(&id).unwrap().get_content();
 
         let id = format!("{}_{}", VIEW_ID_EDIT, "credentials");
-        let new_credentials = cursive.find_id::<EditView>(&id).unwrap().get_content();
+        let new_credentials = cursive.find_name::<EditView>(&id).unwrap().get_content();
 
         if (&old_url, &old_credentials) != (&new_url, &new_credentials) {
             controller_tx
@@ -674,9 +668,9 @@ impl Ui {
 
         let mut account_list = AccountSelectView::new(ui.database.clone());
 
-        let account_detail = TextView::new("").with_id(VIEW_ID_DETAIL).scrollable();
+        let account_detail = TextView::new("").with_name(VIEW_ID_DETAIL).scrollable();
 
-        let account_detail_panel = Panel::new(BoxView::new(
+        let account_detail_panel = Panel::new(ResizedView::new(
             // Hack to make the detail panel consume the rest of the horizontal space.  Full wasn't
             // working when the SelectView had a large number of accounts and scrollbar was
             // present.
@@ -687,7 +681,7 @@ impl Ui {
 
         let ui_tx_clone = ui.ui_tx.clone();
         account_list.set_on_select(move |s, account| {
-            s.call_on_id(VIEW_ID_DETAIL, |detail: &mut TextView| {
+            s.call_on_name(VIEW_ID_DETAIL, |detail: &mut TextView| {
                 detail.set_content(render_account_text(account, false));
                 ui_tx_clone.send(UiMessage::UpdateStatus).unwrap();
             });
@@ -708,10 +702,10 @@ impl Ui {
         });
 
         let account_list_key_override =
-            KeyOverrideView::new(account_list.with_id(VIEW_ID_SELECT)).ignore('/');
+            KeyOverrideView::new(account_list.with_name(VIEW_ID_SELECT)).ignore('/');
         let account_list_keys = account_list_key_override.get_config();
 
-        let account_list_panel = Panel::new(BoxView::new(
+        let account_list_panel = Panel::new(ResizedView::new(
             SizeConstraint::AtLeast(20),
             SizeConstraint::Free,
             account_list_key_override,
@@ -721,11 +715,11 @@ impl Ui {
         h_layout.add_child(account_list_panel);
         h_layout.add_child(account_detail_panel);
 
-        let body = BoxView::new(SizeConstraint::Full, SizeConstraint::Full, h_layout);
+        let body = ResizedView::new(SizeConstraint::Full, SizeConstraint::Full, h_layout);
 
         let ui_tx_clone = ui.ui_tx.clone();
         let filter_edit = EditView::new().on_edit(move |s, text, _| {
-            let details = match s.find_id::<AccountSelectView>(VIEW_ID_SELECT) {
+            let details = match s.find_name::<AccountSelectView>(VIEW_ID_SELECT) {
                 Some(mut account_list) => {
                     account_list.filter(text);
                     account_list
@@ -734,7 +728,7 @@ impl Ui {
                 }
                 None => None,
             };
-            match s.find_id::<TextView>(VIEW_ID_DETAIL) {
+            match s.find_name::<TextView>(VIEW_ID_DETAIL) {
                 Some(mut account_detail) => {
                     match details {
                         Some(details) => account_detail.set_content(details),
@@ -745,17 +739,17 @@ impl Ui {
             };
             ui_tx_clone.send(UiMessage::UpdateStatus).unwrap();
         });
-        let filter_edit = filter_edit.with_id(VIEW_ID_FILTER);
+        let filter_edit = filter_edit.with_name(VIEW_ID_FILTER);
 
-        let revision_text = TextView::new("").with_id(VIEW_ID_REVISION);
-        let modified_text = TextView::new("").with_id(VIEW_ID_MODIFIED);
-        let count_text = TextView::new("").with_id(VIEW_ID_COUNT);
-        let statusline_text = TextView::new("").with_id(VIEW_ID_STATUSLINE);
+        let revision_text = TextView::new("").with_name(VIEW_ID_REVISION);
+        let modified_text = TextView::new("").with_name(VIEW_ID_MODIFIED);
+        let count_text = TextView::new("").with_name(VIEW_ID_COUNT);
+        let statusline_text = TextView::new("").with_name(VIEW_ID_STATUSLINE);
 
         let help_text = TextView::new("Press escape or \\ for menu.");
         let status_layout = LinearLayout::horizontal()
             .child(TextView::new("filter: "))
-            .child(BoxView::new(
+            .child(ResizedView::new(
                 SizeConstraint::AtLeast(14),
                 SizeConstraint::Free,
                 filter_edit,
@@ -770,7 +764,7 @@ impl Ui {
             .child(status_layout)
             .child(help_text)
             .child(statusline_text);
-        let status_box = BoxView::new(
+        let status_box = ResizedView::new(
             SizeConstraint::Full,
             SizeConstraint::Fixed(4),
             status_layout,
@@ -782,7 +776,7 @@ impl Ui {
             .child(body)
             .weight(100)
             .child(status_box);
-        let main_dialog = BoxView::new(SizeConstraint::Full, SizeConstraint::Full, layout);
+        let main_dialog = ResizedView::new(SizeConstraint::Full, SizeConstraint::Full, layout);
 
         ////////////////////////////////////////////////////////////
         // Callbacks
@@ -802,7 +796,7 @@ impl Ui {
         let database_clone2 = ui.database.clone();
 
         let do_focus_filter = Callback::from_fn(|s| {
-            let _ = s.focus_id(VIEW_ID_FILTER);
+            let _ = s.focus_name(VIEW_ID_FILTER);
         });
 
         let do_clipboard_copy_username = Callback::from_fn(|s| {
@@ -840,7 +834,7 @@ impl Ui {
                 Some(account) => account,
                 None => return,
             };
-            match s.find_id::<TextView>(VIEW_ID_DETAIL) {
+            match s.find_name::<TextView>(VIEW_ID_DETAIL) {
                 Some(mut detail) => detail.set_content(render_account_text(&account, true)),
                 None => {}
             };
@@ -1011,7 +1005,7 @@ impl Ui {
     /// Load a new database (or an updated version of the existing database) into the UI.
     pub fn set_database(&mut self, database: &Database) {
         *self.database.borrow_mut() = database.clone();
-        match self.cursive.find_id::<AccountSelectView>(VIEW_ID_SELECT) {
+        match self.cursive.find_name::<AccountSelectView>(VIEW_ID_SELECT) {
             Some(mut account_list) => {
                 let previous_selection = account_list.content.selected_id();
                 account_list.load(self.database.clone());
@@ -1036,7 +1030,8 @@ impl Ui {
     /// specified by its name.  If no account with that name is present,
     /// then the selection is not changed.
     pub fn focus_account(&mut self, account_name: &str) {
-        if let Some(mut account_list) = self.cursive.find_id::<AccountSelectView>(VIEW_ID_SELECT) {
+        if let Some(mut account_list) = self.cursive.find_name::<AccountSelectView>(VIEW_ID_SELECT)
+        {
             let mut target_index: Option<usize> = None;
 
             for (index, name) in account_list.displayed_accounts.iter().enumerate() {
@@ -1158,8 +1153,9 @@ impl Ui {
     /// Present a modal dialog to the user and step the UI until the dialog is dismissed.  This is
     /// a synchronous operation, and will not return until the dialog is finished.
     fn modal_dialog(&mut self, dialog: Dialog) {
-        self.cursive.add_layer(dialog.with_id(VIEW_ID_MODAL));
-        while self.cursive.is_running() && self.cursive.find_id::<Dialog>(VIEW_ID_MODAL).is_some() {
+        self.cursive.add_layer(dialog.with_name(VIEW_ID_MODAL));
+        while self.cursive.is_running() && self.cursive.find_name::<Dialog>(VIEW_ID_MODAL).is_some()
+        {
             self.cursive.step();
         }
     }
@@ -1221,21 +1217,24 @@ impl Ui {
                     *result_clone1.borrow_mut() = Some(String::from(text));
                 }
                 s.pop_layer();
-                s.focus_id(VIEW_ID_SELECT).ok();
+                s.focus_name(VIEW_ID_SELECT).ok();
             });
             editview.set_secret(secret);
             let layout = LinearLayout::vertical()
                 .child(TextView::new(text))
-                .child(editview.with_id(VIEW_ID_INPUT));
+                .child(editview.with_name(VIEW_ID_INPUT));
             self.modal_dialog(
                 Dialog::around(layout)
                     .button("Ok", move |s| {
-                        let text = s.find_id::<EditView>(VIEW_ID_INPUT).unwrap().get_content();
+                        let text = s
+                            .find_name::<EditView>(VIEW_ID_INPUT)
+                            .unwrap()
+                            .get_content();
                         if !text.is_empty() {
                             *result_clone2.borrow_mut() = Some((*text).clone());
                         }
                         s.pop_layer();
-                        s.focus_id(VIEW_ID_SELECT).ok();
+                        s.focus_name(VIEW_ID_SELECT).ok();
                     })
                     .dismiss_button("Cancel")
                     .title("Enter password"),
@@ -1252,7 +1251,7 @@ impl Ui {
     /// to the detail TextView, since it doesn't have a reference to the toplevel Cursive.
     /// Therefore, we need this independent function.
     fn update_detail(&mut self) {
-        let details = match self.cursive.find_id::<AccountSelectView>(VIEW_ID_SELECT) {
+        let details = match self.cursive.find_name::<AccountSelectView>(VIEW_ID_SELECT) {
             Some(account_list) => {
                 match account_list
                     .selection()
@@ -1264,7 +1263,7 @@ impl Ui {
             }
             None => String::from(""),
         };
-        let mut account_detail = match self.cursive.find_id::<TextView>(VIEW_ID_DETAIL) {
+        let mut account_detail = match self.cursive.find_name::<TextView>(VIEW_ID_DETAIL) {
             Some(account_detail) => account_detail,
             None => return,
         };
@@ -1273,24 +1272,24 @@ impl Ui {
 
     /// Update the UI status information: count, revision, etc.
     pub fn update_status(&mut self) {
-        let (counts, revision) = match self.cursive.find_id::<AccountSelectView>(VIEW_ID_SELECT) {
+        let (counts, revision) = match self.cursive.find_name::<AccountSelectView>(VIEW_ID_SELECT) {
             Some(account_list) => (
                 (account_list.display_count(), account_list.count()),
                 self.database.borrow().sync_revision,
             ),
             None => ((0, 0), 0),
         };
-        if let Some(mut count_text) = self.cursive.find_id::<TextView>(VIEW_ID_COUNT) {
+        if let Some(mut count_text) = self.cursive.find_name::<TextView>(VIEW_ID_COUNT) {
             count_text.set_content(format!("{}/{} accounts", counts.0, counts.1));
         };
-        if let Some(mut revision_text) = self.cursive.find_id::<TextView>(VIEW_ID_REVISION) {
+        if let Some(mut revision_text) = self.cursive.find_name::<TextView>(VIEW_ID_REVISION) {
             if revision != 0 {
                 revision_text.set_content(format!("Revision {}", revision));
             } else {
                 revision_text.set_content("")
             };
         };
-        if let Some(mut modified_text) = self.cursive.find_id::<TextView>(VIEW_ID_MODIFIED) {
+        if let Some(mut modified_text) = self.cursive.find_name::<TextView>(VIEW_ID_MODIFIED) {
             if !self.database.borrow().is_synced() {
                 modified_text.set_content(" UNSYNCHRONIZED");
             } else {
@@ -1301,7 +1300,7 @@ impl Ui {
 
     /// Update the status line.
     pub fn set_statusline(&mut self, text: &str) {
-        match self.cursive.find_id::<TextView>(VIEW_ID_STATUSLINE) {
+        match self.cursive.find_name::<TextView>(VIEW_ID_STATUSLINE) {
             Some(mut statusline_text) => {
                 statusline_text.set_content(text);
             }
@@ -1313,7 +1312,7 @@ impl Ui {
 /// Return a reference to the currently selected account.
 fn selected_account(cursive: &mut Cursive) -> Option<Rc<Account>> {
     let select = cursive
-        .find_id::<AccountSelectView>(VIEW_ID_SELECT)
+        .find_name::<AccountSelectView>(VIEW_ID_SELECT)
         .unwrap();
     select.selection()
 }
